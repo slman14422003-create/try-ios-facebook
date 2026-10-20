@@ -2,6 +2,7 @@ package com.iosfb.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -103,11 +104,9 @@ fun FacebookApp(host: TabHost) {
             }
 
             val p by animateFloatAsState(current.progress / 100f, label = "progress")
-            AnimatedVisibility(
+            FadeVisibility(
                 visible = current.progress in 1..99,
                 modifier = Modifier.align(Alignment.TopCenter),
-                enter = fadeIn(),
-                exit = fadeOut(),
             ) {
                 LinearProgressIndicator(
                     progress = { p },
@@ -119,13 +118,11 @@ fun FacebookApp(host: TabHost) {
                 )
             }
 
-            AnimatedVisibility(
+            FadeVisibility(
                 visible = !current.firstLoaded && !current.hasError,
-                enter = fadeIn(),
-                exit = fadeOut(tween(250)),
             ) { FeedSkeleton() }
 
-            AnimatedVisibility(visible = current.hasError, enter = fadeIn(), exit = fadeOut()) {
+            FadeVisibility(visible = current.hasError) {
                 ErrorScreen(onRetry = { current.retry() })
             }
         }
@@ -172,13 +169,11 @@ private fun TopBar(tab: FbTab, canGoBack: Boolean, onBack: () -> Unit, onSearch:
                 .height(48.dp)
                 .padding(horizontal = 6.dp),
         ) {
-            AnimatedVisibility(
+            FadeVisibility(
                 visible = showWordmark,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 10.dp),
-                enter = fadeIn(),
-                exit = fadeOut(),
             ) {
                 Text(
                     "facebook",
@@ -188,21 +183,17 @@ private fun TopBar(tab: FbTab, canGoBack: Boolean, onBack: () -> Unit, onSearch:
                     letterSpacing = (-1).sp,
                 )
             }
-            AnimatedVisibility(
+            FadeVisibility(
                 visible = canGoBack,
                 modifier = Modifier.align(Alignment.CenterStart),
-                enter = fadeIn(),
-                exit = fadeOut(),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Filled.ArrowBackIosNew, "Back", Modifier.size(20.dp), tint = IosColors.Blue)
                 }
             }
-            AnimatedVisibility(
+            FadeVisibility(
                 visible = !showWordmark,
                 modifier = Modifier.align(Alignment.Center),
-                enter = fadeIn(),
-                exit = fadeOut(),
             ) {
                 Text(tab.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = cs.onSurface)
             }
@@ -322,4 +313,23 @@ private fun ErrorScreen(onRetry: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Button(onClick = onRetry, shape = RoundedCornerShape(50)) { Text("Try Again") }
     }
+}
+
+/**
+ * Fade in/out wrapper. Declared at top level (no layout-scope receiver) so it can be called from a
+ * Box that is nested inside a Column without the ColumnScope.AnimatedVisibility ambiguity.
+ */
+@Composable
+private fun FadeVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable AnimatedVisibilityScope.() -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        content = content,
+    )
 }
