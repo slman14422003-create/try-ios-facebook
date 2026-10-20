@@ -1,0 +1,13 @@
+/* iOS-style tweaks injected into the Facebook page.
+   Edit freely: no Kotlin rebuild logic depends on the content. */
+:root { -webkit-tap-highlight-color: transparent; }
+html, body { overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
+body, button, input, textarea, select {
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Roboto, system-ui, sans-serif !important;
+}
+::-webkit-scrollbar { display: none; }
+a, button, [role="button"] { touch-action: manipulation; }
+img { -webkit-user-drag: none; }
+
+/* Web chrome replaced by the native top/bottom bars */
+[data-iosfb-hide] { display: none !important; }
