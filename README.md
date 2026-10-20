@@ -1,7 +1,7 @@
 # IosFacebook – iOS-style Facebook shell for Android (Kotlin + Compose)
 
-Native iOS-looking chrome (top bar, bottom tab bar, haptics, spring animations)
-around `m.facebook.com` running in persistent per-tab WebViews.
+iOS 26 "Liquid Glass" chrome (floating glass buttons, floating capsule tab bar, scroll-edge fade,
+haptics, spring animations) around `m.facebook.com` running in persistent per-tab WebViews.
 
 ## Run
 1. Open the folder in Android Studio (Koala or newer), let Gradle sync
@@ -15,6 +15,12 @@ around `m.facebook.com` running in persistent per-tab WebViews.
 - `ui/FacebookApp.kt` – native top bar, tab bar, skeleton, error screen.
 - `web/FbTab.kt` – tabs and their URLs.
 - `web/TabState.kt` – WebView settings, link routing, push/pop animation.
+
+## iOS 26 look / "not a web page"
+- Page scrolls under the glass bars; the app passes the bar heights to the page as `--iosfb-top` / `--iosfb-bottom` (CSS).
+- Web header, icon row and "Open app" banner are hidden by `ios_fb.js` (label/text based, EN + AR).
+- User-Agent = Chrome minus WebView markers + `[FB_IAB/FB4A;FBAV/...]` (`FB_IAB_SUFFIX` in `TabState.kt`),
+  so Facebook treats it as its in-app browser. Bump the FBAV number if Facebook stops honouring it.
 
 ## Behaviour
 - Re-tap active tab: scroll to top, then refresh.

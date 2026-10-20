@@ -27,6 +27,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
  * One tab = one WebView wrapped in a pull-to-refresh layout.
  * Observable fields drive the native Compose chrome.
  */
+private const val FB_IAB_SUFFIX = " [FB_IAB/FB4A;FBAV/480.0.0.52.80;]"
+
 class TabState(
     val tab: FbTab,
     private val activity: ComponentActivity,
@@ -43,6 +45,8 @@ class TabState(
 
     var onFirstContent: (() -> Unit)? = null
 
+    private var insetTopDp = 0f
+    private var insetBottomDp = 0f
     private var started = false
     private var historyCleared = false
     private var lastHistoryIndex = -1
@@ -88,6 +92,15 @@ class TabState(
         return layout
     }
 
+    fun setInsets(topDp: Float, bottomDp: Float) {
+        if (topDp == insetTopDp && bottomDp == insetBottomDp) return
+        insetTopDp = topDp
+        insetBottomDp = bottomDp
+        val d = activity.resources.displayMetrics.density
+        layout.setProgressViewOffset(false, (topDp * d).toInt(), ((topDp + 64f) * d).toInt())
+        applyInsets(webView)
+    }
+
     fun pause() = webView.onPause()
     fun resume() = webView.onResume()
 
@@ -112,6 +125,16 @@ class TabState(
 
     private fun inject(view: WebView) {
         view.evaluateJavascript(Injector.script(activity), null)
+        applyInsets(view)
+    }
+
+    private fun applyInsets(view: WebView) {
+        view.evaluateJavascript(
+            "(function(){var s=document.documentElement&&document.documentElement.style;" +
+                "if(s){s.setProperty('--iosfb-top','${insetTopDp}px');" +
+                "s.setProperty('--iosfb-bottom','${insetBottomDp}px');}})()",
+            null,
+        )
     }
 
     /** iOS-like push/pop: new page slides in a little from the side while fading up. */
@@ -149,10 +172,11 @@ class TabState(
             displayZoomControls = false
             setSupportMultipleWindows(false)
             textZoom = 100
-            // Look like regular mobile Chrome instead of an embedded WebView.
+            // Not a plain web page: drop the WebView markers and identify as Facebook's own in-app
+            // browser (FB_IAB), so m.facebook.com stops pushing "Open app" banners and web-only chrome.
             userAgentString = userAgentString
                 .replace("; wv", "")
-                .replace(Regex("Version/\\d+\\.\\d+\\s"), "")
+                .replace(Regex("Version/\\d+\\.\\d+\\s"), "") + FB_IAB_SUFFIX
         }
 
         CookieManager.getInstance().apply {

@@ -1,11 +1,11 @@
 package com.iosfb.app.web
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.People
@@ -21,9 +21,9 @@ enum class FbTab(
     val icon: ImageVector,
     val iconSelected: ImageVector,
 ) {
-    HOME("Home", "Home", "/", Icons.Outlined.Home, Icons.Filled.Home),
-    FRIENDS("Friends", "Friends", "/friends/", Icons.Outlined.People, Icons.Filled.People),
-    WATCH("Watch", "Watch", "/watch/", Icons.Outlined.PlayCircle, Icons.Filled.PlayCircle),
-    ALERTS("Alerts", "Notifications", "/notifications/", Icons.Outlined.Notifications, Icons.Filled.Notifications),
-    MENU("Menu", "Menu", "/bookmarks/", Icons.Filled.Menu, Icons.Filled.Menu),
+    HOME("Home", "Home", "/", Icons.Outlined.Home, Icons.Rounded.Home),
+    FRIENDS("Friends", "Friends", "/friends/", Icons.Outlined.People, Icons.Rounded.People),
+    WATCH("Watch", "Watch", "/watch/", Icons.Outlined.PlayCircle, Icons.Rounded.PlayCircle),
+    ALERTS("Alerts", "Notifications", "/notifications/", Icons.Outlined.Notifications, Icons.Rounded.Notifications),
+    MENU("Menu", "Menu", "/bookmarks/", Icons.Rounded.Menu, Icons.Rounded.Menu),
 }

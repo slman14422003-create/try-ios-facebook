@@ -1,13 +1,20 @@
 /* iOS-style tweaks injected into the Facebook page.
-   Edit freely: no Kotlin rebuild logic depends on the content. */
-:root { -webkit-tap-highlight-color: transparent; }
+   --iosfb-top / --iosfb-bottom are set by the app (dp == CSS px) = space under the glass bars. */
+:root { -webkit-tap-highlight-color: transparent; color-scheme: light dark; }
+html { background: transparent !important; }
 html, body { overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; }
+body {
+  box-sizing: border-box;
+  padding-top: var(--iosfb-top, 0px) !important;
+  padding-bottom: var(--iosfb-bottom, 0px) !important;
+}
 body, button, input, textarea, select {
   font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Roboto, system-ui, sans-serif !important;
 }
 ::-webkit-scrollbar { display: none; }
 a, button, [role="button"] { touch-action: manipulation; }
 img { -webkit-user-drag: none; }
+* { -webkit-touch-callout: none; }
 
-/* Web chrome replaced by the native top/bottom bars */
+/* Web chrome replaced by the native glass bars */
 [data-iosfb-hide] { display: none !important; }

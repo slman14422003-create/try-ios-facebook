@@ -19,6 +19,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,38 +32,43 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -70,65 +76,81 @@ import com.iosfb.app.web.FbTab
 import com.iosfb.app.web.TabHost
 import com.iosfb.app.web.TabState
 
+private val TopBarHeight = 56.dp      // row under the status bar
+private val TabBarSpace = 84.dp       // floating tab bar (64) + gaps, below the page content
+
 @Composable
 fun FacebookApp(host: TabHost) {
     val current = host.current
     val cs = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
-    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val statusTop = with(density) { WindowInsets.statusBars.getTop(density).toDp() }
+    val navBottom = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
+
+    // The page scrolls *under* the glass bars (like iOS 26); it only gets padding for them.
+    val topInset = statusTop + TopBarHeight
+    val bottomInset = if (imeVisible) 8.dp else navBottom + TabBarSpace
+    SideEffect { host.setInsets(topInset.value, bottomInset.value) }
 
     // Back: page history first, then non-home tab -> Home, then exit.
     BackHandler(enabled = !current.canGoBack && host.selected != FbTab.HOME) { host.selected = FbTab.HOME }
     BackHandler(enabled = current.canGoBack) { current.goBack() }
 
-    Column(
+    Box(
         Modifier
             .fillMaxSize()
             .background(cs.background)
             .imePadding(),
     ) {
+        Crossfade(
+            targetState = host.selected,
+            animationSpec = tween(180),
+            modifier = Modifier.fillMaxSize(),
+            label = "tab",
+        ) { tab ->
+            WebTab(host.state(tab))
+        }
+
+        val p by animateFloatAsState(current.progress / 100f, label = "progress")
+        FadeVisibility(
+            visible = current.progress in 1..99,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = topInset),
+        ) {
+            LinearProgressIndicator(
+                progress = { p },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp),
+                color = cs.primary,
+                trackColor = Color.Transparent,
+            )
+        }
+
+        FadeVisibility(
+            visible = !current.firstLoaded && !current.hasError,
+            modifier = Modifier.fillMaxSize(),
+        ) { FeedSkeleton(top = topInset, bottom = bottomInset) }
+
+        FadeVisibility(
+            visible = current.hasError,
+            modifier = Modifier.fillMaxSize(),
+        ) { ErrorScreen(onRetry = { current.retry() }) }
+
         TopBar(
             tab = host.selected,
             canGoBack = current.canGoBack,
             onBack = { current.goBack() },
             onSearch = { current.open("/search/") },
+            modifier = Modifier.align(Alignment.TopCenter),
         )
-
-        Box(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            Crossfade(targetState = host.selected, animationSpec = tween(180), label = "tab") { tab ->
-                WebTab(host.state(tab))
-            }
-
-            val p by animateFloatAsState(current.progress / 100f, label = "progress")
-            FadeVisibility(
-                visible = current.progress in 1..99,
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                LinearProgressIndicator(
-                    progress = { p },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
-                    color = IosColors.Blue,
-                    trackColor = Color.Transparent,
-                )
-            }
-
-            FadeVisibility(
-                visible = !current.firstLoaded && !current.hasError,
-            ) { FeedSkeleton() }
-
-            FadeVisibility(visible = current.hasError) {
-                ErrorScreen(onRetry = { current.retry() })
-            }
-        }
 
         AnimatedVisibility(
             visible = !imeVisible,
+            modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
         ) {
@@ -153,72 +175,107 @@ private fun WebTab(state: TabState) {
     }
 }
 
+/** Round Liquid-Glass button (translucent fill, hairline specular edge, soft shadow). */
 @Composable
-private fun TopBar(tab: FbTab, canGoBack: Boolean, onBack: () -> Unit, onSearch: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    val showWordmark = tab == FbTab.HOME && !canGoBack
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(cs.surface)
-            .statusBarsPadding(),
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 6.dp),
-        ) {
-            FadeVisibility(
-                visible = showWordmark,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 10.dp),
-            ) {
-                Text(
-                    "facebook",
-                    color = IosColors.Blue,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-1).sp,
-                )
-            }
-            FadeVisibility(
-                visible = canGoBack,
-                modifier = Modifier.align(Alignment.CenterStart),
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBackIosNew, "Back", Modifier.size(20.dp), tint = IosColors.Blue)
-                }
-            }
-            FadeVisibility(
-                visible = !showWordmark,
-                modifier = Modifier.align(Alignment.Center),
-            ) {
-                Text(tab.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = cs.onSurface)
-            }
-            IconButton(onClick = onSearch, modifier = Modifier.align(Alignment.CenterEnd)) {
-                Icon(Icons.Filled.Search, "Search", tint = cs.onSurface)
-            }
-        }
-        HorizontalDivider(thickness = 0.5.dp, color = cs.outlineVariant)
-    }
+private fun GlassCircleButton(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val g = glassColors()
+    Box(
+        modifier
+            .size(44.dp)
+            .shadow(10.dp, CircleShape, ambientColor = g.shadow, spotColor = g.shadow)
+            .clip(CircleShape)
+            .background(g.fill)
+            .border(0.5.dp, g.stroke, CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 @Composable
-private fun TabBar(selected: FbTab, onSelect: (FbTab) -> Unit) {
+private fun TopBar(
+    tab: FbTab,
+    canGoBack: Boolean,
+    onBack: () -> Unit,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val cs = MaterialTheme.colorScheme
-    Column(
+    val showWordmark = tab == FbTab.HOME && !canGoBack
+    // Scroll-edge effect: the page fades out under the bar instead of ending at a hard line.
+    Box(
+        modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        cs.background.copy(alpha = 0.97f),
+                        cs.background.copy(alpha = 0.90f),
+                        Color.Transparent,
+                    ),
+                ),
+            )
+            .statusBarsPadding()
+            .height(TopBarHeight)
+            .padding(horizontal = 14.dp),
+    ) {
+        FadeVisibility(
+            visible = canGoBack,
+            modifier = Modifier.align(Alignment.CenterStart),
+        ) {
+            GlassCircleButton(onClick = onBack) {
+                Icon(Icons.Rounded.ArrowBackIosNew, "Back", Modifier.size(18.dp), tint = cs.primary)
+            }
+        }
+        FadeVisibility(
+            visible = showWordmark,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 4.dp),
+        ) {
+            Text(
+                "facebook",
+                color = IosColors.FbBlue,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1.2).sp,
+            )
+        }
+        FadeVisibility(
+            visible = !showWordmark,
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            Text(tab.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = cs.onSurface)
+        }
+        GlassCircleButton(onClick = onSearch, modifier = Modifier.align(Alignment.CenterEnd)) {
+            Icon(Icons.Rounded.Search, "Search", Modifier.size(22.dp), tint = cs.onSurface)
+        }
+    }
+}
+
+/** Floating capsule tab bar with a sliding-style selected pill, as in iOS 26. */
+@Composable
+private fun TabBar(selected: FbTab, onSelect: (FbTab) -> Unit) {
+    val g = glassColors()
+    val shape: Shape = RoundedCornerShape(32.dp)
+    Box(
         Modifier
             .fillMaxWidth()
-            .background(cs.surface)
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .padding(start = 18.dp, end = 18.dp, bottom = 10.dp),
     ) {
-        HorizontalDivider(thickness = 0.5.dp, color = cs.outlineVariant)
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(64.dp)
+                .shadow(18.dp, shape, ambientColor = g.shadow, spotColor = g.shadow)
+                .clip(shape)
+                .background(g.fill)
+                .border(0.5.dp, g.stroke, shape)
+                .padding(5.dp),
         ) {
             FbTab.entries.forEach { tab ->
                 TabItem(tab, tab == selected, Modifier.weight(1f)) { onSelect(tab) }
@@ -229,18 +286,26 @@ private fun TabBar(selected: FbTab, onSelect: (FbTab) -> Unit) {
 
 @Composable
 private fun TabItem(tab: FbTab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val g = glassColors()
+    val cs = MaterialTheme.colorScheme
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.12f else 1f,
+        targetValue = if (selected) 1.08f else 1f,
         animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
         label = "tabScale",
     )
     val tint by animateColorAsState(
-        targetValue = if (selected) IosColors.Blue else IosColors.Gray,
+        targetValue = if (selected) cs.primary else IosColors.Gray,
         label = "tabTint",
+    )
+    val pill by animateColorAsState(
+        targetValue = if (selected) g.selected else Color.Transparent,
+        label = "tabPill",
     )
     Column(
         modifier
             .fillMaxHeight()
+            .clip(RoundedCornerShape(27.dp))
+            .background(pill)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -254,18 +319,18 @@ private fun TabItem(tab: FbTab, selected: Boolean, modifier: Modifier, onClick: 
             contentDescription = tab.label,
             tint = tint,
             modifier = Modifier
-                .size(26.dp)
+                .size(24.dp)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                 },
         )
-        Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-private fun FeedSkeleton() {
+private fun FeedSkeleton(top: Dp, bottom: Dp) {
     val cs = MaterialTheme.colorScheme
     val pulse by rememberInfiniteTransition(label = "skeleton").animateFloat(
         initialValue = 0.4f,
@@ -278,7 +343,7 @@ private fun FeedSkeleton() {
         Modifier
             .fillMaxSize()
             .background(cs.background)
-            .padding(16.dp),
+            .padding(start = 16.dp, end = 16.dp, top = top + 12.dp, bottom = bottom),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         repeat(3) {
@@ -289,7 +354,7 @@ private fun FeedSkeleton() {
                     Box(Modifier.size(width = 90.dp, height = 10.dp).clip(RoundedCornerShape(5.dp)).background(block))
                 }
             }
-            Box(Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)).background(block))
+            Box(Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(20.dp)).background(block))
             Spacer(Modifier.height(4.dp))
         }
     }
@@ -305,7 +370,7 @@ private fun ErrorScreen(onRetry: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Filled.WifiOff, null, Modifier.size(56.dp), tint = IosColors.Gray)
+        Icon(Icons.Rounded.WifiOff, null, Modifier.size(56.dp), tint = IosColors.Gray)
         Spacer(Modifier.height(12.dp))
         Text("No Connection", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = cs.onBackground)
         Spacer(Modifier.height(4.dp))
@@ -316,8 +381,8 @@ private fun ErrorScreen(onRetry: () -> Unit) {
 }
 
 /**
- * Fade in/out wrapper. Declared at top level (no layout-scope receiver) so it can be called from a
- * Box that is nested inside a Column without the ColumnScope.AnimatedVisibility ambiguity.
+ * Fade in/out wrapper. Declared at top level (no layout-scope receiver) so it can be called from
+ * nested lambdas without the ColumnScope/RowScope AnimatedVisibility ambiguity.
  */
 @Composable
 private fun FadeVisibility(

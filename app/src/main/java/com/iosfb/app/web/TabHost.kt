@@ -17,7 +17,18 @@ class TabHost(
 
     val current: TabState get() = state(selected)
 
-    fun state(tab: FbTab): TabState = cache.getOrPut(tab) { TabState(tab, activity, browser) }
+    private var insetTop = 0f
+    private var insetBottom = 0f
+
+    fun state(tab: FbTab): TabState =
+        cache.getOrPut(tab) { TabState(tab, activity, browser).also { it.setInsets(insetTop, insetBottom) } }
+
+    /** Space (dp == CSS px) covered by the floating glass bars; pages get it as padding. */
+    fun setInsets(topDp: Float, bottomDp: Float) {
+        insetTop = topDp
+        insetBottom = bottomDp
+        cache.values.forEach { it.setInsets(topDp, bottomDp) }
+    }
 
     fun onActivityPause() {
         cache[selected]?.pause()
