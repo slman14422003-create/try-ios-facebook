@@ -1,1 +1,2 @@
-# No special rules needed.
+-keep class com.camera.app.Native { *; }
+-keepclasseswithmembernames class * { native <methods>; }
