@@ -1,54 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-    <uses-feature android:name="android.hardware.microphone" android:required="false" />
-
-    <queries>
-        <intent>
-            <action android:name="app.semo.ECOSYSTEM" />
-        </intent>
-    </queries>
-
     <application
-        android:name=".App"
         android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="false"
         android:enableOnBackInvokedCallback="true"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:largeHeap="true"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-
-        <!-- Semo ecosystem: what this app is, so the Gallery (and the other Semo apps) can find and open it -->
-        <meta-data android:name="app.semo.ROLE" android:value="camera" />
+        android:theme="@style/Theme.IosFb.Starting">
 
         <activity
-            android:name=".CameraActivity"
+            android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.App.Starting"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density|fontScale|layoutDirection|locale"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="app.semo.ECOSYSTEM" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
-
-        <activity android:name=".SettingsActivity" android:exported="false" />
     </application>
 </manifest>
